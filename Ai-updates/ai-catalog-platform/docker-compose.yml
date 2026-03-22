@@ -1,102 +1,83 @@
 services:
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./frontend/apps/student/Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     ports:
       - '3000:3000'
     environment:
       - NEXT_PUBLIC_API_URL=/api
-      - BACKEND_URL=http://backend:4000
+      - BACKEND_URL=http://student-api:4001
       - NODE_ENV=${NODE_ENV:-development}
-      - WATCHPACK_POLLING=true
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     depends_on:
-      backend:
-        condition: service_started
+      - student-api
     restart: unless-stopped
     networks:
       - app-network
 
-  backend:
+  student-api:
     build:
-      context: ./backend-monolith
+      context: ./backend/apps/student
       dockerfile: Dockerfile
     ports:
-      - '4000:4000'
+      - '4001:4001'
     environment:
-      - PORT=4000
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/ai_catalog_db?schema=public
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-redisSecure2026}@redis:6379
+      - PORT=4001
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=${REDIS_URL:-}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
-      - REFRESH_TOKEN_EXPIRES_IN=${REFRESH_TOKEN_EXPIRES_IN:-7d}
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - NODE_ENV=${NODE_ENV:-development}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
-      - ANYTHINGLLM_BASE_URL=http://anythingllm:3001
-      - ANYTHINGLLM_API_KEY=${ANYTHINGLLM_API_KEY:-}
-    volumes:
-      - ./backend-monolith/src:/app/src
-      - ./backend-monolith/prisma:/app/prisma
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  admin-api:
+    build:
+      context: ./backend/apps/admin
+      dockerfile: Dockerfile
+    ports:
+      - '4003:4003'
+    environment:
+      - PORT=4003
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=${REDIS_URL:-}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - NODE_ENV=${NODE_ENV:-development}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  admin-frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/apps/admin/Dockerfile
+      args:
+        - BACKEND_URL=http://admin-api:4003
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+    ports:
+      - '3050:3000'
+    environment:
+      - NEXT_PUBLIC_API_URL=/api
+      - BACKEND_URL=http://admin-api:4003
+      - NODE_ENV=${NODE_ENV:-development}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=ai_catalog_db
-    ports:
-      - '5433:5432'
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./database/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD:-redisSecure2026}
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redisSecure2026}", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - app-network
-
-  anythingllm:
-    image: mintplexlabs/anythingllm
-    ports:
-      - '3100:3001'
-    environment:
-      - STORAGE_DIR=/app/server/storage
-      - SERVER_PORT=3001
-      - JWT_SECRET=${JWT_SECRET}
-      - DISABLE_TELEMETRY=true
-      - SIG_KEY=ai-catalog
-      - SIG_SALT=ai-catalog-salt
-    volumes:
-      - anythingllm-storage:/app/server/storage
+      - admin-api
     restart: unless-stopped
     networks:
       - app-network
@@ -104,8 +85,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  postgres-data:
-  redis-data:
-  anythingllm-storage:

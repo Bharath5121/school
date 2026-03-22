@@ -1,0 +1,4 @@
+packages:
+  - "backend/auth"
+  - "backend/apps/*"
+  - "frontend/apps/*"

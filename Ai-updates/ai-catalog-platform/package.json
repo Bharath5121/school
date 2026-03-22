@@ -1,18 +1,20 @@
 {
   "name": "ai-catalog-platform",
   "version": "1.0.0",
-  "description": "AI News & Tool Catalog Platform",
   "private": true,
   "scripts": {
-    "dev:backend": "cd backend-monolith && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:backend": "cd backend-monolith && npm run build",
-    "build:frontend": "cd frontend && npm run build",
-    "test": "cd backend-monolith && npm test",
-    "test:coverage": "cd backend-monolith && npm run test:coverage",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "migrate": "./infra/scripts/migrate-all.sh"
-  }
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  },
+  "packageManager": "pnpm@9.0.0"
 }

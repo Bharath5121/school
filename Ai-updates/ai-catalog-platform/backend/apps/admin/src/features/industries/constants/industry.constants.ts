@@ -1,0 +1,1 @@
+export const INDUSTRY_CONSTANTS = { MAX_INDUSTRIES: 50 };
